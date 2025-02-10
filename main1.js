@@ -305,7 +305,8 @@ function moveMe() {
     newGlobalY = me.globalY + gOffY;
   }
 
-  if (solarSystem.fixedPlanet.onPlanet(xTemp + newGlobalX, yTemp + newGlobalY)) {
+  let planet = solarSystem.planets[me.planetIndex];
+  if (planet.onPlanet(xTemp + newGlobalX, yTemp + newGlobalY)) {
     me.globalX = newGlobalX;
     me.globalY = newGlobalY;
     me.x = xTemp;
@@ -391,12 +392,12 @@ function drawGame() {
 
     if (flight.x >= 0) {
       flight.draw();
-      solarSystem.fixedPlanet.drawFlight(flight);
+//      solarSystem.fixedPlanet.drawFlight(flight);
 
-            console.log({flight})
-            console.log({solarSystem})
+//            console.log({flight})
+//            console.log({solarSystem})
             let planet = solarSystem.planets[flight.planetIndex];
-            console.log({planet})
+//            console.log({planet})
             planet.drawFlight(flight);
 //        */
     }
@@ -425,7 +426,7 @@ function createFlights() {
       buls: [],
       hits: Array(15).fill(0),
       rotation: 0,  
-      planetIndex: 0
+      planetIndex: int(random(5))
     }));
   }
 }

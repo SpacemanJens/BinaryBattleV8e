@@ -12,11 +12,11 @@ class FixedPlanet {
   }
 
   onPlanet(xF, yF) {
-    let posX = map(this.d / 2, 0, 200, 0, 2000);
-    let posY = map(this.d / 2, 0, 200, 0, 2000);
+    let posX = map(this.d / 2, 0, this.d, 0, 2000);
+    let posY = map(this.d / 2, 0, this.d, 0, 2000);
 
     let distance = dist(xF, yF, posX, posY);
-    let dMapped = map(this.d, 0, 200, 0, 2000);
+    let dMapped = map(this.d, 0, this.d, 0, 2000);
     return distance < dMapped / 2;  // Return true if the point is inside the planet        
   }
 
@@ -26,8 +26,8 @@ class FixedPlanet {
 
     //    let posX = map(flight.globalX + flight.x,0,2000, 0, 200) + this.x - this.size / 2;
     //    let posY = map(flight.globalY + flight.y,0,2000, 0, 200) + this.y - this.size / 2;
-    let posX = map(flight.globalX + flight.x, 0, 2000, 0, 200) + this.x - this.d / 2 + solarSystem.x;
-    let posY = map(flight.globalY + flight.y, 0, 2000, 0, 200) + this.y - this.d / 2 + solarSystem.y;
+    let posX = map(flight.globalX + flight.x, 0, 2000, 0, this.d) + this.x - this.d / 2 + solarSystem.x;
+    let posY = map(flight.globalY + flight.y, 0, 2000, 0, this.d) + this.y - this.d / 2 + solarSystem.y;
 
     circle(posX, posY, 8);
   }
@@ -79,43 +79,25 @@ class Planet extends CelestialObject {
 //    circle(this.x, this.y, this.baseSize);
   }
   onPlanet(xF, yF) {
-    let posX = map(this.size / 2, 0, 200, 0, 2000);
-    let posY = map(this.size / 2, 0, 200, 0, 2000);
+    let posX = map(this.size / 2, 0, this.size, 0, 2000);
+    let posY = map(this.size / 2, 0, this.size, 0, 2000);
 
     let distance = dist(xF, yF, posX, posY);
     //    console.log(int(distance));
     //    mainCanvas.fill(255)
     //    mainCanvas.text("Distance: " + distance, mouseX, mouseY + 40);
-    let dMapped = map(this.size, 0, 200, 0, 2000);
+    let dMapped = map(this.size, 0, this.size, 0, 2000);
     //console.log(int(dMapped));
     return distance < dMapped / 2;  // Return true if the point is inside the planet        
   }
 
   drawFlight(flight) {
-  fill('yellow')
-  circle(this.x + solarSystem.x, this.y + solarSystem.y, 6);
-    //    fill(flight.color);
-    fill('white');
-    // Use only globalX/Y coordinates for positioning on fixedPlanet
-
-    //    let posX = map(flight.globalX + flight.x,0,2000, 0, 200) + this.x - this.size / 2;
-    //    let posY = map(flight.globalY + flight.y,0,2000, 0, 200) + this.y - this.size / 2;
-//    let posX = map(flight.globalX + flight.x, 0, 2000, 0, 200) + this.x - this.d / 2 + solarSystem.x;
-//    let posY = map(flight.globalY + flight.y, 0, 2000, 0, 200) + this.y - this.d / 2 + solarSystem.y;
-
-   // posX = solarSystem.x + this.x + map(flight.globalX + flight.x, 0, 2000, 0, 200) - 40
-   // posY = solarSystem.y + this.y + map(flight.globalY + flight.y, 0, 2000, 0, 200) - 40
- 
-//   let posX = map(flight.globalX + flight.x, 0, 2000, 0, 200) + this.x - this.size / 2 + solarSystem.x;
-//   let posY = map(flight.globalY + flight.y, 0, 2000, 0, 200) + this.y - this.size / 2 + solarSystem.y;
+//  fill('yellow')
+//  circle(this.x + solarSystem.x, this.y + solarSystem.y, 6);
+    fill(flight.color);
    let posX = map(flight.globalX + flight.x, 0, 2000, 0, this.size) + this.x - this.size / 2 + solarSystem.x;
    let posY = map(flight.globalY + flight.y, 0, 2000, 0, this.size) + this.y - this.size / 2 + solarSystem.y;
-
-   
     circle(posX, posY, 8);
-    fill('purple');
-    circle(this.x + solarSystem.x, this.y + solarSystem.y, 6);
-    circle(this.size, posY - this.size, 8);
   }
 }
 
@@ -161,7 +143,7 @@ class SolarSystem {
     this.angleStars = 0;
     this.starSpeed = 0.5;
     this.planetSpeed = 0.2; // Add global planet speed control
-    this.fixedPlanet = new FixedPlanet(300, 0, 200, [0, 0, 255]);
+ //   this.fixedPlanet = new FixedPlanet(300, 0, 200, [0, 0, 255]);
     this.planets = [
 //      new Planet(10, 0.7, 400, 0.05, 40, [0, 102, 204]),
       new Planet(10, 0.7, 400, 0.05, 40, [0, 102, 204]),
@@ -228,7 +210,7 @@ class SolarSystem {
     }
 
     frontPlanets.forEach(planet => planet.draw());
-    this.fixedPlanet.draw();
+    //this.fixedPlanet.draw();
   }
 }
 
