@@ -1,0 +1,284 @@
+const sketchContainer = document.getElementById("sketch-container");
+
+let me;
+let guests;
+let gameState = "PLAYING"; // TITLE, PLAYING
+let shared;
+let shootingIntervalValue = 1
+let bulletSpeedValue = 1
+let canonTowerCount = 0;
+
+function preload() {
+  partyConnect("wss://p5js-spaceman-server-29f6636dfb6c.herokuapp.com", "jkv-BinaryBattle");
+
+  shared = partyLoadShared("shared", {
+    gameObjects: [],  // Start with empty array
+    canonTowerHits: Array(15).fill(0),
+  });
+
+  me = partyLoadMyShared({ playerName: "observer" });
+  guests = partyLoadGuestShareds();
+}
+
+function setup() {
+//  createCanvas(2500, 1200);
+  angleMode(DEGREES);
+  solarSystem = new SolarSystem(xSolarSystemCenter = 1250, ySolarSystemCenter = 900);
+
+  for (let i = 0; i < 300; i++) {
+    stars.push(new BackgroundStar(random(2500), random(1200)));
+  }
+
+  mainCanvas = createCanvas(2500, 1200);
+  gameCanvas = createGraphics(1200, 600);
+
+  if (me.playerName === "observer") {
+    joinGame();
+    return;
+  }
+}
+
+function draw() {
+  push();
+  solarSystem.update();
+  solarSystem.draw();
+  pop()
+
+  for (let s of stars) {
+    s.move();
+    s.show();
+  }
+
+  drawGameCanvas();
+  image(gameCanvas, 650, 30);
+}
+
+function drawGameCanvas() {
+  gameCanvas.background(0);
+
+  gameCanvas.textSize(18)
+  gameCanvas.text(me.playerName, 400, 30);
+
+  if (gameState === "PLAYING") {
+    stepLocal();
+
+    if (me.playerName != "observer") {
+      moveMe();
+      checkCollisions();
+
+    }
+    drawGame();
+
+
+    if (partyIsHost()) {
+      gameObjects.forEach((canon, index) => {
+
+        canon.move();
+
+        const currentTime = millis();
+        const selectedInterval = shootingIntervalValue;
+
+        // Check if selectedInterval is a valid number
+        if (typeof selectedInterval === 'number') {
+          if (currentTime - canon.lastShotTime > selectedInterval) {
+            const activeFlights = flights.filter(f => f.x >= 0); // Only target visible flights - changed filter
+
+            if (activeFlights.length > 0) {
+              const nearestFlight = canon.findNearestFlight(activeFlights);
+
+              if (nearestFlight) {
+                canon.shoot(nearestFlight);
+                canon.lastShotTime = currentTime;
+              }
+            }
+          }
+        } else {
+          console.warn("Invalid shooting interval:", shootingIntervalSelect.value());
+        }
+
+        canon.moveBullets(); // Move bullets before drawing
+        canon.checkCollisionsWithFlights(flights);  // Add this line
+
+        // Sync to shared state
+        shared.gameObjects[index] = {
+          ...shared.gameObjects[index],
+          x: canon.x,
+          y: canon.y,
+          //          buls: JSON.parse(JSON.stringify(canon.buls)), // Deep copy
+          buls: canon.buls, // Deep copyfhg
+          angle: canon.angle,
+          lastShotTime: canon.lastShotTime,
+          hits: canon.hits, // Update shared state to include hits
+        };
+      });
+
+      // Calculate total hits from canon towers for each player
+      let totalCanonHits = Array(15).fill(0);
+      gameObjects.forEach(canon => {
+        for (let i = 0; i < totalCanonHits.length; i++) {
+          totalCanonHits[i] += canon.hits[i];
+        }
+      });
+      shared.canonTowerHits = totalCanonHits;
+    }
+    // Clients sync from shared state
+    else {
+      // Ensure client has same number of towers as host
+      while (gameObjects.length < shared.gameObjects.length) {
+        const i = gameObjects.length;
+        gameObjects.push(new Canon({
+          objectNumber: i,
+          objectName: `canon${i}`,
+          x: shared.gameObjects[i].x,
+          y: shared.gameObjects[i].y,
+          r: 30,
+          color: 'grey',
+          spawnX: shared.gameObjects[i].x,
+          spawnY: shared.gameObjects[i].y
+        }));
+      }
+      // Remove extra towers if host has fewer
+      while (gameObjects.length > shared.gameObjects.length) {
+        gameObjects.pop();
+      }
+      // Update existing towers
+      gameObjects.forEach((canon, index) => {
+        canon.x = shared.gameObjects[index].x;
+        canon.y = shared.gameObjects[index].y;
+        canon.buls = shared.gameObjects[index].buls;
+        canon.angle = shared.gameObjects[index].angle;
+        canon.lastShotTime = shared.gameObjects[index].lastShotTime; // Sync lastShotTime
+        canon.hits = shared.gameObjects[index].hits || Array(15).fill(0);
+      });
+    }
+
+    // Draw Canon Towers for all players
+    gameObjects.forEach(canon => {
+      canon.drawCanonTower();
+      canon.drawBullets();
+      canon.drawScore();
+    });
+  }
+}
+
+function stepHost() {
+}
+
+function moveMe() {
+  let offSetX = 0;
+  let offSetY = 0;
+  if (keyIsDown(70)) { offSetX = -3 } // F
+  if (keyIsDown(72)) { offSetX = 3 } // H
+  if (keyIsDown(84)) { offSetY = -3 } // T
+  if (keyIsDown(71)) { offSetY = 3 } // G
+
+  xTemp = me.x + offSetX;
+  yTemp = me.y + offSetY;
+
+  if (onScreen(xTemp, yTemp)) {
+    me.x = xTemp;
+    me.y = yTemp;
+  }
+
+  me.xMouse = mouseX;
+  me.yMouse = mouseY;
+
+  const myFlight = flights.find(f => f.playerName === me.playerName);
+  if (myFlight) {
+    myFlight.x = me.x;
+    myFlight.y = me.y;
+    myFlight.xMouse = me.xMouse;
+    myFlight.yMouse = me.yMouse;
+    myFlight.buls = me.buls;
+    myFlight.moveBullets();
+    me.buls = myFlight.buls;
+  }
+}
+
+function checkCollisions() {
+
+  flights.forEach((flight) => {
+    if (flight.playerName != me.playerName) {
+      checkCollisionsWithFlight(flight);
+    }
+  });
+
+}
+function checkCollisionsWithFlight(flight) {
+
+  for (let i = me.buls.length - 1; i >= 0; i--) {
+
+    let bullet = me.buls[i];
+
+    let d = dist(flight.x, flight.y, bullet.x, bullet.y);
+
+    if (d < (flight.r + gameConstants.bulletDiameter) / 2) {
+      me.hits[flight.playerNumber]++;
+      me.buls.splice(i, 1);
+    }
+  }
+}
+
+function onScreen(x, y) {
+  return dist(500, 500, x, y) < gameConstants.planetDiameter / 2;
+}
+function stepLocal() {
+
+  flights.forEach(flight => {
+    const guest = guests.find((p) => p.playerName === flight.playerName);
+    if (guest) {
+      flight.syncFromShared(guest);
+    } else {
+      flight.x = -32;
+    }
+  });
+}
+
+function mousePressed() {
+
+  if (me.playerName === "observer")
+    return
+
+  const myFlight = flights.find(f => f.playerName === me.playerName);
+  if (myFlight) {
+    myFlight.shoot();
+    me.buls = myFlight.buls;
+  }
+}
+
+function drawGame() {
+  xText = 0
+  flights.forEach((flight) => {
+    flight.draw();
+  });
+}
+
+function joinGame() {
+
+  // don't let current players double join
+  if (me.playerName.startsWith("player")) return;
+  for (let flight of flights) {
+    if (!guests.find((p) => p.playerName === flight.playerName)) {
+      spawn(flight);
+      me.playerName = flight.playerName;
+      return;
+    }
+  }
+}
+
+function watchGame() {
+  me.playerName = "observer";
+}
+
+function spawn(flight) {
+  me.playerNumber = flight.playerNumber;
+  me.playerName = flight.playerName;
+  me.x = flight.spawnX;
+  me.y = flight.spawnY;
+  me.r = flight.r
+  me.rotation = flight.rotation;
+  me.color = flight.color;
+  me.buls = [];
+  me.hits = Array(15).fill(0);
+}
+

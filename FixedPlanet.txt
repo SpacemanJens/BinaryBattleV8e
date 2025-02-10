@@ -1,0 +1,27 @@
+class FixedPlanet {
+  constructor(x, y, r, color) {
+    this.x = x;
+    this.y = y;
+    this.r = r;
+    this.color = color;
+  }
+
+  draw() {
+    push();
+    fill(0, 0, 50);
+    stroke(255);
+    circle(this.x, this.y, this.r);
+    pop();
+  }
+
+  drawFlight(flight) {
+    if (!flight.globalX || !flight.globalY) return;
+    
+    push();
+    fill(flight.color);
+    noStroke();
+    // Draw flight position using globalX and globalY
+    circle(flight.globalX, flight.globalY, 10);
+    pop();
+  }
+}
